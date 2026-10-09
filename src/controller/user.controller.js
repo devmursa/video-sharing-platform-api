@@ -183,32 +183,88 @@ const changeAvatar = asyncHandler(async function (req, res) {
     throw new APIError(400, "Avatar upload failed!");
   }
 
-  const updateAvatar = await User.findByIdAndUpdate(req.user._id,
-     {
+  const updateAvatar = await User.findByIdAndUpdate(
+    req.user._id,
+    {
       $set: {
-      avatar: {
-        url: newAvatar.url,
-        public_id: newAvatar.public_id,
+        avatar: {
+          url: newAvatar.url,
+          public_id: newAvatar.public_id,
+        },
       },
     },
-     },
-     {returnDocument:"after"}
+    { returnDocument: "after" },
   );
 
-  if(!updateAvatar){
+  if (!updateAvatar) {
     throw new APIError(400, "avatar  failed!");
   }
 
-  
   const deleteAvatar = await deleteOnCloudinary(oldAvatarId);
   if (!deleteAvatar) {
     throw new APIError(400, "avatar delete failed!");
   }
 
-  req.user=updateAvatar;
-  console.log(req.user)
+  req.user = updateAvatar;
+  console.log(req.user);
 
   return res.status(200).json({ mes: "changeAvatar" });
 });
 
-export { userRegister, userLogin, userLogout, changePassword, changeAvatar };
+const getWatchHistory = asyncHandler(async function (req, res) {
+  const getUserHistory = await User.aggregate([
+    { $match: { _id: req.user._id } },
+
+    {
+      $lookup: {
+        from: "videos",
+        foreignField: "_id",
+        localField: "watchHistory",
+        as: "watchHistory",
+      },
+    },
+  ]);
+});
+
+const getUserProfile = asyncHandler(async function (req, res) {
+
+const username=req.params?.user;
+if(!username){throw new APIError(400,"Username is missing")}
+
+const getUserProfile=await User.aggregate([
+ { $match:{username}},
+
+ { $lookup:{
+  from:"subscriptions",
+  localField:"_id",
+  foreignField:"channel",
+  as:"subscribers"
+ }},
+
+ { $lookup:{
+  from:"subscriptions",
+  localField:"_id",
+  foreignField:"subscriber",
+  as:"subscribedTo"
+ }}
+
+
+])
+console.log(getUserProfile)
+
+
+ return res.status(200).json({ mes: "getUserProfile" });
+})
+
+
+
+
+export {
+  userRegister,
+  userLogin,
+  userLogout,
+  changePassword,
+  changeAvatar,
+  getWatchHistory,
+  getUserProfile
+};
